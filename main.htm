@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Расписной покер</title>
+</head>
+<body style="background-color: #0C980C">
+<style>
+	.modal-parent {
+		background: rgba(0, 0, 0, 0.5);
+		width: 100%;
+		height: 100%;
+		position: fixed;
+		top: 0;
+		left: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center; 
+		overflow: auto;
+	}
+	.modal-block {
+		background-color: #FFFFFF;
+		border: 1px solid gray;  
+		border-radius: 5px;
+	}
+	.other-player {
+		width: 120px;
+		height: 40px;
+		border: 2px solid orange;
+		margin: 5px;
+		padding: 2px;
+		float: left;
+	}
+	.other-player-first {
+		border: 2px solid red;
+	}
+	.cards {
+		width: 80%;
+		height: 220px;
+		left: 5px;
+		top: 5px;
+		float: left;
+		background-color: #0000AA;
+		padding: 0 5px 0 5px;
+		white-space: nowrap;	
+	}
+	.player-card {
+		margin: 10px 2px 10px 2px;
+		cursor: pointer;
+	}
+</style>
+<div class="modal-parent">
+	<div class="modal-block">
+		<div class="modal_container" style="max-width:720px; padding:10px;">
+			<div style="float:left;margin:5px;">
+				<span>Количество игроков:</span><br/>
+				<select id="param-players">
+					<option value="3">трое</option>
+					<option value="4">четверо</option>
+					<option value="6">шестеро</option>
+				</select>
+				<br/>
+				<input type="checkbox" id="hide-flag" checked="checked" /><span> Игра в тёмную</span>
+			</div>
+			<div style="float:right;margin:5px;">
+				<span>Козырь:</span><br/>
+				<select id="param-trump">
+					<option value="D">бубны</option>
+					<option value="C">кресты</option>
+					<option value="H">чирвы</option>
+					<option value="S">пики</option>
+				</select>
+			</div>
+			<div style="margin:5px;">
+				<input type="button" id="start-game" value="Начать игру" onclick="doInit();" />
+			</div>
+		</div>
+	</div>
+</div>
+<div id="players-list" style="float:left;"></div>
+<div id="table" style="width:80%;min-height:400px;left:5px;top:5px;float:left;border-radius:10px;background-color:#FC8E41;margin-bottom:5px;padding: 0 5px 0 5px;">
+</div>
+<div id="status-board" style="width:15%;float:right;">
+	<span>Раунд: <span id="current-round"></span></span><br/>
+	<span>Козырь: <span id="current-trump"></span></span><br/>
+	<span>Ваши очки: <span id="player0-stats">0</span></span><br/>
+	<span>Ваши взятки: <span id="player0-vists">0</span>/<span id="player0-vists-needed">0</span></span>
+</div>
+<div id="cards" class="cards">
+	<input type="button" id="next-turn" value="Следующий ход" onclick="doNextTurn();" style="display: none; float: right;" />
+	<input type="button" id="end-round" value="Завершить раунд" onclick="doRoundEnd();" style="display: none; float: right;" />
+	<div id="vists-choice" style="display: none; float: right; border: 1px solid black;" >
+		<select id="player-vists">
+		</select>
+		<input type="button" value="Ок" onclick="doPlayerChoice();" />
+	</div>
+</div>
+<div id="ai-test" style="width:15%;float:right;">
+	<span id="ai-test1"></span><br/>
+	<span id="ai-test2"></span><br/>
+	<span id="ai-test3"></span>
+</div>
+<script src="jquery.min.js"></script>
+<script src="poker.js"></script>
+</body>
+</html>
