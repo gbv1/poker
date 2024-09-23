@@ -27,7 +27,7 @@
 		width: 120px;
 		height: 40px;
 		border: 2px solid orange;
-		margin: 5px;
+		margin: 0px 5px 5px 5px;
 		padding: 2px;
 		float: left;
 	}
@@ -48,6 +48,33 @@
 		margin: 10px 2px 10px 2px;
 		cursor: pointer;
 	}
+	.table-card {
+		height: 100px;
+		width: 71px;
+	}
+	#card-place {
+	    position: relative;
+	    left: 20px; /* Минимальное значение для маленьких экранов */
+	}
+	@media (min-width: 400px) {
+	    #card-place {
+	        left: 40px; /* Увеличиваем отступ для экранов шире 400px */
+	    }
+	}
+	@media (min-width: 600px) {
+	    #card-place {
+	        left: 60px; /* Еще больше отступ для экранов шире 600px */
+	    }
+	    .table-card {
+			height: 200px;
+			width: 143px;
+		}
+	}
+	@media (min-width: 800px) {
+	    #card-place {
+	        left: calc(50% - 100px); /* Используем проценты для широких экранов */
+	    }
+	}
 </style>
 <div class="modal-parent">
 	<div class="modal-block">
@@ -57,10 +84,15 @@
 				<select id="param-players">
 					<option value="3">трое</option>
 					<option value="4">четверо</option>
+					<option value="5">пятеро</option>
 					<option value="6">шестеро</option>
 				</select>
 				<br/>
-				<input type="checkbox" id="hide-flag" checked="checked" /><span> Игра в тёмную</span>
+				<input type="checkbox" id="hide-flag" checked="checked" /><span> Тёмная</span>
+				<br/>
+				<input type="checkbox" id="gold-flag" checked="checked" /><span> Золотая</span>
+				<br/>
+				<input type="checkbox" id="debug-mode" checked="checked" /><span> Режим отладки</span>
 			</div>
 			<div style="float:right;margin:5px;">
 				<span>Козырь:</span><br/>
@@ -69,36 +101,48 @@
 					<option value="C">кресты</option>
 					<option value="H">чирвы</option>
 					<option value="S">пики</option>
+					<option value="R">случайно</option>
 				</select>
 			</div>
-			<div style="margin:5px;">
+			<div style="display: flex; justify-content: center; width: 100%;">
 				<input type="button" id="start-game" value="Начать игру" onclick="doInit();" />
 			</div>
 		</div>
 	</div>
 </div>
-<div id="players-list" style="float:left;"></div>
-<div id="table" style="width:80%;min-height:400px;left:5px;top:5px;float:left;border-radius:10px;background-color:#FC8E41;margin-bottom:5px;padding: 0 5px 0 5px;">
+<div id="players-list" style="display: flex; flex-direction: row;flex-wrap: wrap; width: 100%;"></div>
+<div id="table" style="width:80%; min-height:400px; display: flex; flex-direction: column; align-content: flex-start; flex-wrap: wrap; justify-content: space-between; float:left; border-radius:10px; background-color:#FC8E41; margin-bottom:5px; padding: 0 5px 0 5px;">
+	<div id="card-place">
+	</div>
+	<div style="width: 100%; display: flex; justify-content: center; margin: 5px;">
+		<input type="button" id="next-turn" value="Следующий ход" onclick="doNextTurn();" style="display: none;" />
+		<input type="button" id="end-round" value="Завершить раунд" onclick="doRoundEnd();" style="display: none;" />
+		<div id="vists-choice" style="display: none;">
+			Заказать взяток: 
+			<select id="player-vists">
+			</select>
+			<input type="button" value="Ок" onclick="doPlayerChoice();" />
+		</div>
+		<div id="player-turn-tooltip" style="display: none;">
+			Ваш ход, выберите карту из списка ниже
+		</div>
+	</div>
 </div>
-<div id="status-board" style="width:15%;float:right;">
-	<span>Раунд: <span id="current-round"></span></span><br/>
+<div id="status-board" style="width: 15%; float: right;">
+	<span>Раунд: <span id="current-round"></span><span id="round-type"></span></span><br/>
 	<span>Козырь: <span id="current-trump"></span></span><br/>
 	<span>Ваши очки: <span id="player0-stats">0</span></span><br/>
 	<span>Ваши взятки: <span id="player0-vists">0</span>/<span id="player0-vists-needed">0</span></span>
 </div>
 <div id="cards" class="cards">
-	<input type="button" id="next-turn" value="Следующий ход" onclick="doNextTurn();" style="display: none; float: right;" />
-	<input type="button" id="end-round" value="Завершить раунд" onclick="doRoundEnd();" style="display: none; float: right;" />
-	<div id="vists-choice" style="display: none; float: right; border: 1px solid black;" >
-		<select id="player-vists">
-		</select>
-		<input type="button" value="Ок" onclick="doPlayerChoice();" />
-	</div>
 </div>
 <div id="ai-test" style="width:15%;float:right;">
 	<span id="ai-test1"></span><br/>
 	<span id="ai-test2"></span><br/>
-	<span id="ai-test3"></span>
+	<span id="ai-test3"></span><br/>
+	<span id="ai-test4"></span><br/>
+	<span id="ai-test5"></span>
+
 </div>
 <script src="jquery.min.js"></script>
 <script src="poker.js"></script>

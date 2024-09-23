@@ -2,12 +2,14 @@
 //параметры
 var gTrump = ""; //козырь
 var gJoker = "";
+var gParamTramp = "";
+var gDebug = false;
 var gPlayers = 0; //количество игроков
 var gProtagonist = 0; //номер игрока-человека
 var gColod36 = ["6C", "6D", "6H", "6S", "7C", "7D", "7H", "7S", "8C", "8D", "8H", "8S", "9C", "9D", "9H", "9S", "TC", "TD", "TH", "TS", "JC", "JD", "JH", "JS", "QC", "QD", "QH", "QS", "KC", "KD", "KH", "KS", "AC", "AD", "AH", "AS"];
 //флаги и счётчики
 var gProtagonistTurn = false; //статус хода игрока-человека
-var gCurrentRound = 0;
+var gCurrentRound = 0; //стартовый раунд, можно увеличивать, чтобы тестить игру в поздних режимах
 var gCurrentPlayerTurn = 0; //номер игрока, который ходит в данный момент
 var gTurnCount = 0; //счётчик количества игроков, положивших карту в данном ходу
 var gVistChoice = 0; //счётчик количества игроков, сделавших выбор кол-ва взяток
@@ -19,9 +21,12 @@ var gVists = []; //массив с текущими взятками игрок�
 var gRoundOrder = [];
 
 function doInit(){ //функция считывает параметры и формирует массивы с инфой о геймплее 
-	gTrump = $("#param-trump").val(); 
+	gParamTramp = $("#param-trump").val(); 
+	gTrump = gParamTramp; 
 	gJoker = "7S";
+	gDebug = document.getElementById("debug-mode").checked;
 	gPlayers = $("#param-players").val(); 
+
 	var vistArr = [0, 0];
 	for (var i = 0; i < gPlayers; i++) {
 		var vistObj = [].concat(vistArr);
@@ -32,26 +37,34 @@ function doInit(){ //функция считывает параметры и ф�
 	}
 	//составляем массив с последовательностью раундов согласно выбранным настройкам
 	var roundArr =  ["normal", 0]; //для каждого раунда будут указаны тип игры и кол-во карт для раздачи
-	for (var i = 1; i < (gColod36.length / gPlayers); i++){
+	for (var i = 1; i < Math.floor(gColod36.length / gPlayers); i++){ //начало основной игры, кол-во раздаваемых карт возрастает
 		var roundObj = [].concat(roundArr);
 		roundObj[1] = i;
 		gRoundOrder.push(roundObj);
 	}
-	for (i = 1; i < gPlayers; i++){
+	for (i = 1; i < gPlayers; i++){ //середина основной игры, раздаётся максимум карт столько раундов, сколько всего игроков
 		var roundObj = [].concat(roundArr);
-		roundObj[1] = gColod36.length / gPlayers;
+		roundObj[1] = Math.floor(gColod36.length / gPlayers);
 		gRoundOrder.push(roundObj);
 	}
-	for (i = (gColod36.length / gPlayers); i > 0; i--){
+	for (i = Math.floor(gColod36.length / gPlayers); i > 0; i--){ //конец основной игры, кол-во раздаваемых карт уменьшается
 		var roundObj = [].concat(roundArr);
 		roundObj[1] = i;
 		gRoundOrder.push(roundObj);
 	}
-	if (document.getElementById("hide-flag").checked){
+	if (document.getElementById("hide-flag").checked){ //тёмная, раздаётся максимум карт столько раундов, сколько всего игроков
 		for (i = 0; i < gPlayers; i++){
 			var roundObj = [].concat(roundArr);
 			roundObj[0] = "hide";
-			roundObj[1] = gColod36.length / gPlayers;
+			roundObj[1] = Math.floor(gColod36.length / gPlayers);
+			gRoundOrder.push(roundObj);
+		}
+	}
+	if (document.getElementById("hide-flag").checked){ //золотая, раздаётся максимум карт столько раундов, сколько всего игроков
+		for (i = 0; i < gPlayers; i++){
+			var roundObj = [].concat(roundArr);
+			roundObj[0] = "gold";
+			roundObj[1] = Math.floor(gColod36.length / gPlayers);
 			gRoundOrder.push(roundObj);
 		}
 	}
@@ -158,14 +171,19 @@ function doRemoveCard(cardType){ //удаляет заданную карту т
 //функция задаёт параметры изображения (image) карты (card) и возвращает это изображения уже с нужными парметрами для карты на столе.
 //а также вызывает удаление выложенной карты у игрока
 function doCardOnTable(image, card){
+	//немного адаптивности для отступов между картами на столе
+	let screenWidth = window.innerWidth;
+	let leftDist = (window.innerWidth > 600 ? 40 : 20 );
+	let topDist= (window.innerWidth > 600 ? 20 : 15 );
+	//формируем нужные свойства для карты на столе
 	image.className = "table-card";
 	image.id = "card" + gTurnCount;
 	image.src = "img/" + card + ".png";
-	image.setAttribute("height", "200px");
+	//image.setAttribute("height", "200px");
 	image.setAttribute("card", card);
-	image.style.position = "relative";
-	image.style.left = (500 - (gTurnCount * 120)) + "px";
-	image.style.top = (50 + (gTurnCount * 20)) + "px";
+	image.style.position = "absolute";
+	image.style.left = (gTurnCount - 1)  * leftDist + "px";
+	image.style.top = gTurnCount * topDist + "px";
 	image.style.zIndex = 1 + gTurnCount;
 	image.style.marginLeft = "2px";
 	gTableCards.push(card);
@@ -183,7 +201,7 @@ function getVistsImpossible(){ //функция возвращает кол-во
 }
 
 // *** Блок функций ИИ ***
-function AI_getVists(){ //возвращает количество взяток, заказываемых ИИ
+function AI_getVists(){ //возвращает количество взяток, заказываемых ИИ. Надо бы сделать его более смелым, особенно при малом количестве карт на сдачу
 	var result = 0;
 	if (gRoundOrder[gCurrentRound][0] === "hide"){
 		result = Math.floor(1 + Math.random() * (gRoundOrder[gCurrentRound][1] / 2 | 0 + 1)); //ИИ заказывает случайно от 1 до кол-ва карт делённого на 2 без остатка плюс 1
@@ -203,7 +221,9 @@ function AI_getVists(){ //возвращает количество взяток
 			}
 		}
 	}
-	if (result === getVistsImpossible()) result++;
+	//если одну взятку нельзя заказать, то пусть пасует (для раундов с 1 картой актуально особенно), в других случаях берёт на 1 больше
+	if (result === 1 && getVistsImpossible() === 1) result = 0;
+	else if (result === getVistsImpossible()) result++;
 	return result;
 }
 
@@ -215,7 +235,7 @@ function AI_getCard(){ //возвращает номер карты игрока
 		if (getPossibility(currentCards[i]) > 0) availableCards.push(currentCards[i]);
 	}
 	if (gTableCards.length === 0){ //если игрок ложит карту первым за ход
-		if (gVists[gCurrentPlayerTurn][0] === gVists[gCurrentPlayerTurn][1]) return AI_getCard_stupid();
+		if (gVists[gCurrentPlayerTurn][0] === gVists[gCurrentPlayerTurn][1] && gRoundOrder[gCurrentRound][0] !== "gold") return AI_getCard_stupid();
 		else return getGrandCard(availableCards); //если свои взятки игрок ещё не взял или перебрал, пытаемся набрать их наиболее сильной картой 
 	}
 	else {
@@ -223,7 +243,7 @@ function AI_getCard(){ //возвращает номер карты игрока
 	}
 }
 
-function AI_getVists_stupid(){ //возвращает количество взяток, заказываемых ИИ, пока без особого умысла
+function AI_getVists_stupid(){ //возвращает количество взяток, заказываемых ИИ, пока без особого умысла - сейчас не используется
 	var result = 0;
 	if (gVistChoice !== gPlayers - 1) return Math.floor(Math.random() * (gRoundOrder[gCurrentRound][1] + 1));
 	else do {
@@ -254,6 +274,9 @@ function doDistribution(cardsNumb){ //раздача карт
 		cardMargin = ((148 * cardsNumb - cardsWidth) / cardsNumb) | 0; //рассчитываем, на сколько px карта должна накрывать предыдущую, чтобы все они поместились
 		document.getElementById("cards").style.paddingLeft = cardMargin + 5 + "px"; //паддинг слева, чтобы первая карта была без отступа
 	}
+	if (gParamTramp === "R") { //если козырь рандомный, то случайно назначаем его при каждой раздаче
+		gTrump = "DCHS"[Math.floor(Math.random() * "DCHS".length)];
+	}
 	for (var i = 0; i < cardsNumb; i++) {
 		for (var j = 0; j < gPlayers; j++) {
 			currCard = currentColod.pop();
@@ -279,29 +302,30 @@ function doDistribution(cardsNumb){ //раздача карт
 		}	
 	}
 	$(".player-card").on("click", function(e) { //навешиваем на карты игрока-человека события, чтобы он мог ложить карту по клику на неё
-	currentCard = this;
-	if (gProtagonistTurn && (getPossibility(currentCard.getAttribute("card")) > 0)) {
-  		$(".table-card").unbind("click");
-		document.getElementById("table").appendChild(doCardOnTable(currentCard, currentCard.getAttribute("card")));
-		gProtagonistTurn = false;
-		if (gCurrentPlayerTurn >= gPlayers - 1) gCurrentPlayerTurn = 0;
-		else gCurrentPlayerTurn++;
-		if (gTurnCount < gPlayers) doTurn();
-		else doTurnEnd();
-	}
-});
+		currentCard = this;
+		if (gProtagonistTurn && (getPossibility(currentCard.getAttribute("card")) > 0)) {
+	  		$(".table-card").unbind("click");
+			document.getElementById("card-place").appendChild(doCardOnTable(currentCard, currentCard.getAttribute("card")));
+			gProtagonistTurn = false;
+			if (gCurrentPlayerTurn >= gPlayers - 1) gCurrentPlayerTurn = 0;
+			else gCurrentPlayerTurn++;
+			if (gTurnCount < gPlayers) doTurn();
+			else doTurnEnd();
+		}
+	});
 }
 
 function doTurn(){ //функция разрешает ходить игроку-человеку или осуществляет ход АИ
 	gTurnCount++;
 	if (gCurrentPlayerTurn == gProtagonist) { //если gProtagonistTurn, игрок может ходить 
 		gProtagonistTurn = true;
+		document.getElementById("player-turn-tooltip").style.display = "block";
 	}
 	else { //ход ИИ
 		var currentCards = gPlayerCards[gCurrentPlayerTurn];
 		var tempImage = new Image();
 		var ai_card = AI_getCard();
-		document.getElementById("table").appendChild(doCardOnTable(tempImage, ai_card));
+		document.getElementById("card-place").appendChild(doCardOnTable(tempImage, ai_card));
 		if (gCurrentPlayerTurn >= gPlayers - 1) gCurrentPlayerTurn = 0;
 		else gCurrentPlayerTurn++;
 		if (gTurnCount < gPlayers) doTurn();
@@ -340,18 +364,24 @@ function doTurnEnd(){
 	gCurrentPlayerTurn = playerOrder[winner]; //преобразуем в фиксированный номер игрока, а не по порядку хода в данный момент, победитель будет ходить следующим 
 	gVists[gCurrentPlayerTurn][0]++;
 	$("#player" + gCurrentPlayerTurn + "-vists").text(gVists[gCurrentPlayerTurn][0]);
+	document.getElementById("player-turn-tooltip").style.display = "none";
 	if (gPlayerCards[0].length != 0) document.getElementById("next-turn").style.display = "block"; //кнопка для перехода к следующему ходу
 	else { //иначе активируем кнопку окончания раунда и выводим результат, здесь нужно для того, чтобы результаты последнего хода и всего раунда можно было посмотреть
 		//подведение итогов раунда
 		var vistDiff = 0;
 		for (var i = 0; i < gPlayers; i++){
-			vistDiff = gVists[i][0] - gVists[i][1]; //разница между взятыми и заказанными взятками
-			if (vistDiff === 0) {
-				if (gVists[i][1] === 0) gResultTable[i] += 5; //если игрок пасовал
-				else gResultTable[i] += gVists[i][1] * 10;
+			if (gRoundOrder[gCurrentRound][0] === "gold") { //на голде просто даём очки за каждую взятку
+				gResultTable[i] += gVists[i][0] * 10;
+			} 
+			else {	
+				vistDiff = gVists[i][0] - gVists[i][1]; //разница между взятыми и заказанными взятками
+				if (vistDiff === 0) {
+					if (gVists[i][1] === 0) gResultTable[i] += 5; //если игрок пасовал
+					else gResultTable[i] += gVists[i][1] * 10;
+				}
+				else if (vistDiff > 0) gResultTable[i] += gVists[i][0];
+				else gResultTable[i] += vistDiff * 10;
 			}
-			else if (vistDiff > 0) gResultTable[i] += gVists[i][0];
-			else gResultTable[i] += vistDiff * 10;
 			$("#player" + i + "-stats").text(gResultTable[i]); 
 		}
 		document.getElementById("end-round").style.display = "block"; 
@@ -363,9 +393,11 @@ function doNextTurn(){ //событие по клику кнопки "Следу
 	$(".table-card").remove(); //очищаем стол от карт предыдущего хода
 	while (gTableCards.length != 0) gTableCards.pop();
 	gTurnCount = 0; 
-	document.getElementById("ai-test1").innerText = gPlayerCards[1]; //выводим карты ИИ для более наглядного тестирования
-	document.getElementById("ai-test2").innerText = gPlayerCards[2];
-	document.getElementById("ai-test3").innerText = gPlayerCards[3];
+	if (gDebug) { //выводим карты ИИ для более наглядного тестирования
+		for (var i = 1; i < gPlayers; i++) { 
+			document.getElementById("ai-test" + i).innerText = gPlayerCards[i];
+		}
+	}
 	doTurn();
 }
 
@@ -382,6 +414,15 @@ function doRoundEnd(){ //очистка карт игроков, запуск с
 
 function doNewRound(){
 	$("#current-round").text(gCurrentRound + 1);
+	if (gRoundOrder[gCurrentRound][0] === "gold") {
+		$("#round-type").text(" (золот.)");
+	} else if (gRoundOrder[gCurrentRound][0] === "hide") {
+		$("#round-type").text(" (тёмн.)");
+	} else if (gRoundOrder[gCurrentRound][0] === "normal") {
+		$("#round-type").text(" (обычн.)");
+	} else {
+		$("#round-type").text(" (неизв.)");
+	}
 	gCurrentPlayerTurn = gCurrentRound % gPlayers; //рассчитываем ходящего первым игрока из номера раунда и кол-ва игроков
 	if (gCurrentPlayerTurn !== gProtagonist) $(".other-player").eq(gCurrentPlayerTurn - 1).toggleClass("other-player-first", true); //отмечаем красной рамкой ИИ-игрока, который ходит первым в этом раунде
 	for (var i = 0; i < gPlayers; i++) {
@@ -404,38 +445,53 @@ function doNewRound(){
   	}	
 	gVistChoice = 0;
 	doVistChoice(); //запускаем рекурсивную функцию заказа взяток для человека и ИИ
-	document.getElementById("ai-test1").innerText = gPlayerCards[1]; //выводим карты ИИ для более наглядного тестирования
-	document.getElementById("ai-test2").innerText = gPlayerCards[2];
-	document.getElementById("ai-test3").innerText = gPlayerCards[3];
+	if (gDebug) { //выводим карты ИИ для более наглядного тестирования
+		for (var i = 1; i < gPlayers; i++) { 
+			document.getElementById("ai-test" + i).innerText = gPlayerCards[i];
+		}
+	}
 }
 
 function doPlayerChoice(){
-	gVists[gCurrentPlayerTurn][1] = parseInt(document.getElementById("player-vists").value);
+	if (gRoundOrder[gCurrentRound][0] === "gold") {
+		gVists[gCurrentPlayerTurn][1] = 0;
+	} else {
+		gVists[gCurrentPlayerTurn][1] = parseInt(document.getElementById("player-vists").value);
+		document.getElementById("vists-choice").style.display = "none";
+	}
 	$("#player" + gCurrentPlayerTurn + "-vists-needed").text(gVists[gCurrentPlayerTurn][1]);
 	gCurrentPlayerTurn++;
 	gVistChoice++;
 	if (gCurrentPlayerTurn > gPlayers - 1) gCurrentPlayerTurn = 0;
-	document.getElementById("vists-choice").style.display = "none";
 	doVistChoice();
 }
 
 function doVistChoice(){
 	if (gVistChoice < gPlayers){
 		if (gCurrentPlayerTurn == gProtagonist) {
-			var vistSel = document.getElementById("player-vists");
-			var vistsImpossible = getVistsImpossible(); //если игрок выбирает последним, может быть ограничение на взятки
-			var j = 0;
-			for (var i = 0; i <= gRoundOrder[gCurrentRound][1]; i++){
-				if ((i === 0) && (gRoundOrder[gCurrentRound][0] === "hide")) continue; //при игре в тёмную нельзя пасовать
-				if (i !== vistsImpossible) {
-					vistSel.options[j] = new Option(i, i); //когда ограничения нет, vistsImpossible отрицательна и всегда не равна i 
-					j++;
-				}
+			if (gRoundOrder[gCurrentRound][0] === "gold"){
+				doPlayerChoice();
 			}
-			document.getElementById("vists-choice").style.display = "block";
+			else {	
+				var vistSel = document.getElementById("player-vists");
+				var vistsImpossible = getVistsImpossible(); //если игрок выбирает последним, может быть ограничение на взятки
+				var j = 0;
+				for (var i = 0; i <= gRoundOrder[gCurrentRound][1]; i++){
+					if ((i === 0) && (gRoundOrder[gCurrentRound][0] === "hide")) continue; //при игре в тёмную нельзя пасовать
+					if (i !== vistsImpossible) {
+						vistSel.options[j] = new Option(i, i); //когда ограничения нет, vistsImpossible отрицательна и всегда не равна i 
+						j++;
+					}
+				}
+				document.getElementById("vists-choice").style.display = "block";
+			} 
 		}
 		else {
-			gVists[gCurrentPlayerTurn][1] = AI_getVists();
+			if (gRoundOrder[gCurrentRound][0] === "gold"){
+				gVists[gCurrentPlayerTurn][1] = 0;
+			} else {
+				gVists[gCurrentPlayerTurn][1] = AI_getVists();
+			}
 			$("#player" + gCurrentPlayerTurn + "-vists-needed").text(gVists[gCurrentPlayerTurn][1]);
 			gCurrentPlayerTurn++;
 			gVistChoice++;
@@ -453,7 +509,6 @@ function doVistChoice(){
 		}
 		gTurnCount = 0; 
 		doTurn(); //первый ход в раунде
-		
 	}
 }
 
