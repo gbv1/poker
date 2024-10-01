@@ -2,14 +2,14 @@
 //параметры
 var gTrump = ""; //козырь
 var gJoker = "";
-var gParamTramp = "";
+var gParamTrump = "";
 var gDebug = false;
 var gPlayers = 0; //количество игроков
 var gProtagonist = 0; //номер игрока-человека
 var gColod36 = ["6C", "6D", "6H", "6S", "7C", "7D", "7H", "7S", "8C", "8D", "8H", "8S", "9C", "9D", "9H", "9S", "TC", "TD", "TH", "TS", "JC", "JD", "JH", "JS", "QC", "QD", "QH", "QS", "KC", "KD", "KH", "KS", "AC", "AD", "AH", "AS"];
 //флаги и счётчики
 var gProtagonistTurn = false; //статус хода игрока-человека
-var gCurrentRound = 0; //стартовый раунд, можно увеличивать, чтобы тестить игру в поздних режимах
+var gCurrentRound = 22; //стартовый раунд, можно увеличивать, чтобы тестить игру в поздних режимах
 var gCurrentPlayerTurn = 0; //номер игрока, который ходит в данный момент
 var gTurnCount = 0; //счётчик количества игроков, положивших карту в данном ходу
 var gVistChoice = 0; //счётчик количества игроков, сделавших выбор кол-ва взяток
@@ -21,8 +21,8 @@ var gVists = []; //массив с текущими взятками игрок�
 var gRoundOrder = [];
 
 function doInit(){ //функция считывает параметры и формирует массивы с инфой о геймплее 
-	gParamTramp = $("#param-trump").val(); 
-	gTrump = gParamTramp; 
+	gParamTrump = $("#param-trump").val(); 
+	gTrump = gParamTrump; 
 	gJoker = "7S";
 	gDebug = document.getElementById("debug-mode").checked;
 	gPlayers = $("#param-players").val(); 
@@ -60,6 +60,22 @@ function doInit(){ //функция считывает параметры и ф�
 			gRoundOrder.push(roundObj);
 		}
 	}
+	if (document.getElementById("trumpless-flag").checked){ //бескозырка, раздаётся максимум карт столько раундов, сколько всего игроков
+		for (i = 0; i < gPlayers; i++){
+			var roundObj = [].concat(roundArr);
+			roundObj[0] = "trumpless";
+			roundObj[1] = Math.floor(gColod36.length / gPlayers);
+			gRoundOrder.push(roundObj);
+		}
+	}
+	if (document.getElementById("miser-flag").checked){ //мизер, раздаётся максимум карт столько раундов, сколько всего игроков
+		for (i = 0; i < gPlayers; i++){
+			var roundObj = [].concat(roundArr);
+			roundObj[0] = "miser";
+			roundObj[1] = Math.floor(gColod36.length / gPlayers);
+			gRoundOrder.push(roundObj);
+		}
+	}
 	if (document.getElementById("hide-flag").checked){ //золотая, раздаётся максимум карт столько раундов, сколько всего игроков
 		for (i = 0; i < gPlayers; i++){
 			var roundObj = [].concat(roundArr);
@@ -93,16 +109,22 @@ Array.prototype.shuffle = function(b){ //перемешивание массив
 function getCardsByPotential(card) {
 	var potential = 0;
 	var randomValue = Math.random();
+	var coefPlayers = 3; //поправка на кол-во игроков, чем их больше, тем труднее брать взятки, исходным считаем три игрока
 	if (card[1] === gTrump){ //для козырей
 		if ((gColod36.indexOf(card) >= 20) && (gColod36.indexOf(card) < 32)) potential = 0.8; //лица
 		else if (gColod36.indexOf(card) < 20) potential = 0.5; //числа
+	}
+	else if (gRoundOrder[gCurrentRound][0] === "trumpless"){ //для бескозырки отдельно посчитаем (надо бы учесть больше наборы лиц одной масти)
+		if (gColod36.indexOf(card) >= 32) potential = 1; //тузы в бескозырке почти гарантированно берут
+		else if ((gColod36.indexOf(card) >= 20) && (gColod36.indexOf(card) < 32)) potential = 0.5; //обыкновенные лица - средний
+		else potential = 0.2; //мелочь иногда тоже может сыграть
 	}
 	else { //не козыри имеют более низкий потенциал
 		if (gColod36.indexOf(card) >= 32) potential = 0.5; //тузы имеют средний потенциал
 		else if ((gColod36.indexOf(card) >= 20) && (gColod36.indexOf(card) < 32)) potential = 0.2; //обыкновенные лица - низкий
 		else potential = 0; //меньше вальта вообще в расчёт не берём, взять ими можно чисто случайно
 	}
-	potential = potential * (3 / gPlayers); //поправка на кол-во игроков, чем их больше, тем труднее брать взятки, исходным считаем три игрока
+	potential = potential * (coefPlayers / gPlayers); 
   	if (randomValue <= potential) return 1;
   	else return 0; 
 }
@@ -128,6 +150,19 @@ function getGrandCard(cards){ //функция возвращает cтаршу�
 		} 
 	}	
 	return cards[grandCard];	
+}
+
+function getJunCard(cards){ //функция возвращает младшую карту из переданного массива cards
+	var junCard = 0;
+	for (var i = 1; i < cards.length; i++) {
+		if (gColod36.indexOf(cards[i]) < gColod36.indexOf(cards[junCard])) {
+			if (!((cards[junCard][1] !== gTrump) && (cards[i][1] === gTrump))) junCard = i;
+		}
+		else {
+			if ((cards[junCard][1] === gTrump) && (cards[i][1] !== gTrump)) junCard = i;	
+		} 
+	}	
+	return cards[junCard];	
 }
 
 function getPossibility(cardType){ //функция проверяет можно ли положить данную карту (cardType) на стол и возвращает номер ситуации, если 0 - то нельзя
@@ -234,12 +269,12 @@ function AI_getCard(){ //возвращает номер карты игрока
 	for (var i = 0; i < currentCards.length; i++){ //формируем массив карт, которые мы вообще можем положить
 		if (getPossibility(currentCards[i]) > 0) availableCards.push(currentCards[i]);
 	}
-	if (gTableCards.length === 0){ //если игрок ложит карту первым за ход
-		if (gVists[gCurrentPlayerTurn][0] === gVists[gCurrentPlayerTurn][1] && gRoundOrder[gCurrentRound][0] !== "gold") return AI_getCard_stupid();
-		else return getGrandCard(availableCards); //если свои взятки игрок ещё не взял или перебрал, пытаемся набрать их наиболее сильной картой 
+	if ((gVists[gCurrentPlayerTurn][0] === gVists[gCurrentPlayerTurn][1] || gRoundOrder[gCurrentRound][0] === "miser") && gRoundOrder[gCurrentRound][0] !== "gold") { //если не нужно набирать взятки
+		if (gTableCards.length === 0) return getJunCard(availableCards); //если игрок ложит карту первым за ход, то кидает минимальную, которой сложно что-то взять
+		else return AI_getCard_stupid();
 	}
-	else {
-		return AI_getCard_stupid();
+	else { //если взятки ещё нужно брать, то ИИ будет это пытаться делать самой старшей картой
+		return getGrandCard(availableCards);
 	}
 }
 
@@ -274,8 +309,14 @@ function doDistribution(cardsNumb){ //раздача карт
 		cardMargin = ((148 * cardsNumb - cardsWidth) / cardsNumb) | 0; //рассчитываем, на сколько px карта должна накрывать предыдущую, чтобы все они поместились
 		document.getElementById("cards").style.paddingLeft = cardMargin + 5 + "px"; //паддинг слева, чтобы первая карта была без отступа
 	}
-	if (gParamTramp === "R") { //если козырь рандомный, то случайно назначаем его при каждой раздаче
+	if (gRoundOrder[gCurrentRound][0] === "trumpless") { //Для бескозырки назначаем козырем несуществующую масть
+		gTrump = "N";
+	}
+	else if (gParamTrump === "R") { //если козырь по настройкам рандомный, то случайно назначаем его при раздаче
 		gTrump = "DCHS"[Math.floor(Math.random() * "DCHS".length)];
+	}
+	else { //в остальных случаях (статический козырь) прямо назначаем козырь согласно настройкам
+		gTrump = gParamTrump;
 	}
 	for (var i = 0; i < cardsNumb; i++) {
 		for (var j = 0; j < gPlayers; j++) {
@@ -373,6 +414,10 @@ function doTurnEnd(){
 			if (gRoundOrder[gCurrentRound][0] === "gold") { //на голде просто даём очки за каждую взятку
 				gResultTable[i] += gVists[i][0] * 10;
 			} 
+			if (gRoundOrder[gCurrentRound][0] === "miser") { //на мизере отнимаем очки за каждую взятку и даём бонус тем, кто не взял ничего
+				gResultTable[i] -= gVists[i][0] * 10;
+				if (gVists[i][0] == 0) gResultTable[i] += 50;
+			} 
 			else {	
 				vistDiff = gVists[i][0] - gVists[i][1]; //разница между взятыми и заказанными взятками
 				if (vistDiff === 0) {
@@ -416,8 +461,12 @@ function doNewRound(){
 	$("#current-round").text(gCurrentRound + 1);
 	if (gRoundOrder[gCurrentRound][0] === "gold") {
 		$("#round-type").text(" (золот.)");
+	} else if (gRoundOrder[gCurrentRound][0] === "miser") {
+		$("#round-type").text(" (мизер)");	
 	} else if (gRoundOrder[gCurrentRound][0] === "hide") {
 		$("#round-type").text(" (тёмн.)");
+	} else if (gRoundOrder[gCurrentRound][0] === "trumpless") {
+		$("#round-type").text(" (бескоз.)");
 	} else if (gRoundOrder[gCurrentRound][0] === "normal") {
 		$("#round-type").text(" (обычн.)");
 	} else {
@@ -439,10 +488,15 @@ function doNewRound(){
 
 	doDistribution(gRoundOrder[gCurrentRound][1]); //раздача карт
 
-	var trumpSel = document.getElementById("param-trump").options;
-	for (i = 0; i < trumpSel.length; i++){ //выводим название текущего козыря, найдя его в списке из настроек
-    	if (trumpSel[i].value === gTrump) $("#current-trump").text(trumpSel[i].text);
-  	}	
+	if (gRoundOrder[gCurrentRound][0] === "trumpless") {
+		$("#current-trump").text("нет");
+	} else {
+		var trumpSel = document.getElementById("param-trump").options;
+		for (i = 0; i < trumpSel.length; i++){ //выводим название текущего козыря, найдя его в списке из настроек
+			if (trumpSel[i].value === gTrump) $("#current-trump").text(trumpSel[i].text);
+		}
+	}
+	
 	gVistChoice = 0;
 	doVistChoice(); //запускаем рекурсивную функцию заказа взяток для человека и ИИ
 	if (gDebug) { //выводим карты ИИ для более наглядного тестирования
@@ -453,7 +507,7 @@ function doNewRound(){
 }
 
 function doPlayerChoice(){
-	if (gRoundOrder[gCurrentRound][0] === "gold") {
+	if (gRoundOrder[gCurrentRound][0] === "gold" || gRoundOrder[gCurrentRound][0] === "miser") { //на голде с мизером взятки не заказываются
 		gVists[gCurrentPlayerTurn][1] = 0;
 	} else {
 		gVists[gCurrentPlayerTurn][1] = parseInt(document.getElementById("player-vists").value);
@@ -469,7 +523,7 @@ function doPlayerChoice(){
 function doVistChoice(){
 	if (gVistChoice < gPlayers){
 		if (gCurrentPlayerTurn == gProtagonist) {
-			if (gRoundOrder[gCurrentRound][0] === "gold"){
+			if (gRoundOrder[gCurrentRound][0] === "gold" || gRoundOrder[gCurrentRound][0] === "miser"){
 				doPlayerChoice();
 			}
 			else {	
@@ -487,7 +541,7 @@ function doVistChoice(){
 			} 
 		}
 		else {
-			if (gRoundOrder[gCurrentRound][0] === "gold"){
+			if (gRoundOrder[gCurrentRound][0] === "gold" || gRoundOrder[gCurrentRound][0] === "miser"){
 				gVists[gCurrentPlayerTurn][1] = 0;
 			} else {
 				gVists[gCurrentPlayerTurn][1] = AI_getVists();
