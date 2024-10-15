@@ -17,11 +17,14 @@
 		align-items: center;
 		justify-content: center; 
 		overflow: auto;
+		z-index: 100;
 	}
 	.modal-block {
 		background-color: #FFFFFF;
 		border: 1px solid gray;  
 		border-radius: 5px;
+		max-height: 90vh; /* Ограничиваем высоту контейнера до 90% высоты экрана */
+		overflow-y: auto;
 	}
 	.other-player {
 		width: 120px;
@@ -40,7 +43,7 @@
 		left: 5px;
 		top: 5px;
 		float: left;
-		background-color: #0000AA;
+		background-color: #0000CD;
 		padding: 0 5px 0 5px;
 		white-space: nowrap;	
 	}
@@ -55,6 +58,14 @@
 	#card-place {
 	    position: relative;
 	    left: 20px; /* Минимальное значение для маленьких экранов */
+	}
+	#history-table {
+	    border-collapse: collapse; 
+	}
+	#history-table td, #history-table th {
+	    border: 1px solid DarkOliveGreen; 
+	    padding: 2px;
+	    text-align: center;
 	}
 	@media (min-width: 400px) {
 	    #card-place {
@@ -77,8 +88,8 @@
 	}
 </style>
 <div class="modal-parent">
-	<div class="modal-block">
-		<div class="modal_container" style="max-width:720px; padding:10px;">
+	<div class="modal-block" id="settings-block">
+		<div class="modal-container" style="max-width:720px; padding:10px;">
 			<div style="float:left;margin:5px;">
 				<span>Количество игроков:</span><br/>
 				<select id="param-players">
@@ -113,6 +124,18 @@
 			</div>
 		</div>
 	</div>
+	<div class="modal-block" id="history-block" style="display: none;">
+		<div class="modal-container" style="max-width:720px; padding:10px;">
+			<div>
+				<table id="history-table">
+
+				</table>	
+			</div>	
+			<div style="display: flex; justify-content: center; width: 100%;">
+				<input type="button" value="Закрыть" onclick="$('.modal-parent').css('display', 'none');$('#history-block').css('display', 'none');"/>
+			</div>
+		</div>
+	</div>
 </div>
 <div id="players-list" style="display: flex; flex-direction: row;flex-wrap: wrap; width: 100%;"></div>
 <div id="table" style="width:80%; min-height:400px; display: flex; flex-direction: column; align-content: flex-start; flex-wrap: wrap; justify-content: space-between; float:left; border-radius:10px; background-color:#FC8E41; margin-bottom:5px; padding: 0 5px 0 5px;">
@@ -136,7 +159,8 @@
 	<span>Раунд: <span id="current-round"></span><span id="round-type"></span></span><br/>
 	<span>Козырь: <span id="current-trump"></span></span><br/>
 	<span>Ваши очки: <span id="player0-stats">0</span></span><br/>
-	<span>Ваши взятки: <span id="player0-vists">0</span>/<span id="player0-vists-needed">0</span></span>
+	<span>Ваши взятки: <span id="player0-vists">0</span>/<span id="player0-vists-needed">0</span></span><br/>
+	<span><a href="#" onclick="viewHistory();">история</a></span>
 </div>
 <div id="cards" class="cards">
 </div>

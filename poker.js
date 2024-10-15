@@ -9,7 +9,7 @@ var gProtagonist = 0; //номер игрока-человека
 var gColod36 = ["6C", "6D", "6H", "6S", "7C", "7D", "7H", "7S", "8C", "8D", "8H", "8S", "9C", "9D", "9H", "9S", "TC", "TD", "TH", "TS", "JC", "JD", "JH", "JS", "QC", "QD", "QH", "QS", "KC", "KD", "KH", "KS", "AC", "AD", "AH", "AS"];
 //флаги и счётчики
 var gProtagonistTurn = false; //статус хода игрока-человека
-var gCurrentRound = 22; //стартовый раунд, можно увеличивать, чтобы тестить игру в поздних режимах
+var gCurrentRound = 0; //стартовый раунд, можно увеличивать, чтобы тестить игру в поздних режимах
 var gCurrentPlayerTurn = 0; //номер игрока, который ходит в данный момент
 var gTurnCount = 0; //счётчик количества игроков, положивших карту в данном ходу
 var gVistChoice = 0; //счётчик количества игроков, сделавших выбор кол-ва взяток
@@ -19,6 +19,7 @@ var gPlayerCards = []; //массив будет хранить текущие �
 var gTableCards = []; //массив, хранящий карты на столе
 var gVists = []; //массив с текущими взятками игроков
 var gRoundOrder = [];
+var gHistory = [];
 
 function doInit(){ //функция считывает параметры и формирует массивы с инфой о геймплее 
 	gParamTrump = $("#param-trump").val(); 
@@ -36,21 +37,25 @@ function doInit(){ //функция считывает параметры и ф�
 		gResultTable.push(0);
 	}
 	//составляем массив с последовательностью раундов согласно выбранным настройкам
-	var roundArr =  ["normal", 0]; //для каждого раунда будут указаны тип игры и кол-во карт для раздачи
+	let roundArr =  ["normal", 0]; //для каждого раунда будут указаны тип игры и кол-во карт для раздачи
+	let historyStr = new Array(gPlayers * 2).fill(0); //базовая строка в таблице истории, зависящая от количества игроков (на каждого по ячейке для взяток и ячейке для полученных очков)
 	for (var i = 1; i < Math.floor(gColod36.length / gPlayers); i++){ //начало основной игры, кол-во раздаваемых карт возрастает
 		var roundObj = [].concat(roundArr);
 		roundObj[1] = i;
 		gRoundOrder.push(roundObj);
+		gHistory.push(Array.from(historyStr));
 	}
 	for (i = 1; i < gPlayers; i++){ //середина основной игры, раздаётся максимум карт столько раундов, сколько всего игроков
 		var roundObj = [].concat(roundArr);
 		roundObj[1] = Math.floor(gColod36.length / gPlayers);
 		gRoundOrder.push(roundObj);
+		gHistory.push(Array.from(historyStr));
 	}
 	for (i = Math.floor(gColod36.length / gPlayers); i > 0; i--){ //конец основной игры, кол-во раздаваемых карт уменьшается
 		var roundObj = [].concat(roundArr);
 		roundObj[1] = i;
 		gRoundOrder.push(roundObj);
+		gHistory.push(Array.from(historyStr));
 	}
 	if (document.getElementById("hide-flag").checked){ //тёмная, раздаётся максимум карт столько раундов, сколько всего игроков
 		for (i = 0; i < gPlayers; i++){
@@ -58,6 +63,7 @@ function doInit(){ //функция считывает параметры и ф�
 			roundObj[0] = "hide";
 			roundObj[1] = Math.floor(gColod36.length / gPlayers);
 			gRoundOrder.push(roundObj);
+			gHistory.push(Array.from(historyStr));
 		}
 	}
 	if (document.getElementById("trumpless-flag").checked){ //бескозырка, раздаётся максимум карт столько раундов, сколько всего игроков
@@ -66,6 +72,7 @@ function doInit(){ //функция считывает параметры и ф�
 			roundObj[0] = "trumpless";
 			roundObj[1] = Math.floor(gColod36.length / gPlayers);
 			gRoundOrder.push(roundObj);
+			gHistory.push(Array.from(historyStr));
 		}
 	}
 	if (document.getElementById("miser-flag").checked){ //мизер, раздаётся максимум карт столько раундов, сколько всего игроков
@@ -74,6 +81,7 @@ function doInit(){ //функция считывает параметры и ф�
 			roundObj[0] = "miser";
 			roundObj[1] = Math.floor(gColod36.length / gPlayers);
 			gRoundOrder.push(roundObj);
+			gHistory.push(Array.from(historyStr));
 		}
 	}
 	if (document.getElementById("hide-flag").checked){ //золотая, раздаётся максимум карт столько раундов, сколько всего игроков
@@ -82,6 +90,7 @@ function doInit(){ //функция считывает параметры и ф�
 			roundObj[0] = "gold";
 			roundObj[1] = Math.floor(gColod36.length / gPlayers);
 			gRoundOrder.push(roundObj);
+			gHistory.push(Array.from(historyStr));
 		}
 	}
 	//создаём информационные табло игроков ИИ 
@@ -90,6 +99,7 @@ function doInit(){ //функция считывает параметры и ф�
 		$("#players-list").append(playerHTML);
 	}
 		$(".modal-parent").css("display", "none"); //скрываем модальное окно с настройками
+		$("#settings-block").css("display", "none");
 		doNewRound();							   //и начинаем первый раунд
 }
 
@@ -193,8 +203,8 @@ function getPossibility(cardType){ //функция проверяет можн�
 		}
 	}
 }
-
-function doRemoveCard(cardType){ //удаляет заданную карту текущего игрока после того, как он положил её на стол
+//удаляет заданную карту текущего игрока после того, как он положил её на стол
+function doRemoveCard(cardType){ 
 	for (var i = 0; i < gPlayerCards[gCurrentPlayerTurn].length; i++){
 		if (gPlayerCards[gCurrentPlayerTurn][i].indexOf(cardType) >= 0) {
 			gPlayerCards[gCurrentPlayerTurn].splice(i, 1);
@@ -202,7 +212,49 @@ function doRemoveCard(cardType){ //удаляет заданную карту т
 		}
 	}
 }
+//отображает таблицу с историей матча
+function viewHistory() {
+	$(".modal-parent").css("display", "flex");
+	$("#history-block").css("display", "block");
+	var table = document.getElementById("history-table");
+	let count = 0;
 
+	table.innerHTML = "";
+
+	//Создаём заголовки таблицы
+    var thead = document.createElement("thead");
+    var headerRow = document.createElement("tr");
+
+    //Первый столбец заголовка - "Раунд"
+    var roundHeader = document.createElement("th");
+    roundHeader.textContent = "Раунд";
+    headerRow.appendChild(roundHeader);
+    //Далее добавляем заголовки для каждого игрока (по два столбца на игрока)
+    for (var i = 1; i <= gPlayers; i++) {
+        var playerHeader = document.createElement("th");
+        playerHeader.textContent = "Игрок " + i;
+        playerHeader.colSpan = 2;
+        headerRow.appendChild(playerHeader);
+    }
+    thead.appendChild(headerRow);
+    table.appendChild(thead); 
+
+	gHistory.forEach(function(rowData) {
+		var row = document.createElement("tr");
+		//первая ячейка с номером раунда
+		var indexCell = document.createElement("td");
+		count++;
+        indexCell.textContent = count;
+        row.appendChild(indexCell);
+        //дальше ячейки с результатами раунда
+		rowData.forEach(function(cellData) {
+			var cell = document.createElement("td");
+			cell.textContent = cellData;
+			row.appendChild(cell);
+		});
+        table.appendChild(row);
+    });
+}
 //функция задаёт параметры изображения (image) карты (card) и возвращает это изображения уже с нужными парметрами для карты на столе.
 //а также вызывает удаление выложенной карты у игрока
 function doCardOnTable(image, card){
@@ -409,24 +461,27 @@ function doTurnEnd(){
 	if (gPlayerCards[0].length != 0) document.getElementById("next-turn").style.display = "block"; //кнопка для перехода к следующему ходу
 	else { //иначе активируем кнопку окончания раунда и выводим результат, здесь нужно для того, чтобы результаты последнего хода и всего раунда можно было посмотреть
 		//подведение итогов раунда
-		var vistDiff = 0;
+		let vistDiff = 0;
+		let roundResult = 0;
 		for (var i = 0; i < gPlayers; i++){
 			if (gRoundOrder[gCurrentRound][0] === "gold") { //на голде просто даём очки за каждую взятку
-				gResultTable[i] += gVists[i][0] * 10;
+				roundResult = gVists[i][0] * 10;
 			} 
 			if (gRoundOrder[gCurrentRound][0] === "miser") { //на мизере отнимаем очки за каждую взятку и даём бонус тем, кто не взял ничего
-				gResultTable[i] -= gVists[i][0] * 10;
-				if (gVists[i][0] == 0) gResultTable[i] += 50;
+				roundResult = gVists[i][0] * (-10);
+				if (gVists[i][0] == 0) roundResult = 50;
 			} 
 			else {	
 				vistDiff = gVists[i][0] - gVists[i][1]; //разница между взятыми и заказанными взятками
 				if (vistDiff === 0) {
-					if (gVists[i][1] === 0) gResultTable[i] += 5; //если игрок пасовал
-					else gResultTable[i] += gVists[i][1] * 10;
+					if (gVists[i][1] === 0) roundResult = 5; //если игрок пасовал
+					else roundResult = gVists[i][1] * 10;
 				}
-				else if (vistDiff > 0) gResultTable[i] += gVists[i][0];
-				else gResultTable[i] += vistDiff * 10;
+				else if (vistDiff > 0) roundResult = gVists[i][0];
+				else roundResult = vistDiff * 10;
 			}
+			gResultTable[i] += roundResult;
+			gHistory[gCurrentRound][i*2 + 1] = roundResult;
 			$("#player" + i + "-stats").text(gResultTable[i]); 
 		}
 		document.getElementById("end-round").style.display = "block"; 
@@ -511,6 +566,7 @@ function doPlayerChoice(){
 		gVists[gCurrentPlayerTurn][1] = 0;
 	} else {
 		gVists[gCurrentPlayerTurn][1] = parseInt(document.getElementById("player-vists").value);
+		gHistory[gCurrentRound][gProtagonist*2] = gVists[gCurrentPlayerTurn][1];
 		document.getElementById("vists-choice").style.display = "none";
 	}
 	$("#player" + gCurrentPlayerTurn + "-vists-needed").text(gVists[gCurrentPlayerTurn][1]);
@@ -545,6 +601,7 @@ function doVistChoice(){
 				gVists[gCurrentPlayerTurn][1] = 0;
 			} else {
 				gVists[gCurrentPlayerTurn][1] = AI_getVists();
+				gHistory[gCurrentRound][gCurrentPlayerTurn*2] = gVists[gCurrentPlayerTurn][1];
 			}
 			$("#player" + gCurrentPlayerTurn + "-vists-needed").text(gVists[gCurrentPlayerTurn][1]);
 			gCurrentPlayerTurn++;
