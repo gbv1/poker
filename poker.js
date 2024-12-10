@@ -249,9 +249,12 @@ function viewHistory() {
         //дальше ячейки с результатами раунда
 		rowData.forEach(function(cellData) {
 			var cell = document.createElement("td");
-			cell.textContent = cellData;
+			cell.textContent = (count - 1 <= gCurrentRound ? cellData : "");
 			row.appendChild(cell);
 		});
+		if (count - 1 == gCurrentRound) {
+			row.style.backgroundColor = "#399941";
+		}
         table.appendChild(row);
     });
 }
