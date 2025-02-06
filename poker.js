@@ -221,15 +221,18 @@ function viewHistory() {
 
 	table.innerHTML = "";
 
-	//Создаём заголовки таблицы
+	//создаём заголовки таблицы
     var thead = document.createElement("thead");
     var headerRow = document.createElement("tr");
 
-    //Первый столбец заголовка - "Раунд"
+    //первый столбец заголовка - "Раунд"
     var roundHeader = document.createElement("th");
     roundHeader.textContent = "Раунд";
     headerRow.appendChild(roundHeader);
-    //Далее добавляем заголовки для каждого игрока (по два столбца на игрока)
+    roundHeader = document.createElement("th");
+    roundHeader.textContent = "Тип";
+    headerRow.appendChild(roundHeader);
+    //далее добавляем заголовки для каждого игрока (по два столбца на игрока)
     for (var i = 1; i <= gPlayers; i++) {
         var playerHeader = document.createElement("th");
         playerHeader.textContent = "Игрок " + i;
@@ -243,9 +246,13 @@ function viewHistory() {
 		var row = document.createElement("tr");
 		//первая ячейка с номером раунда
 		var indexCell = document.createElement("td");
-		count++;
-        indexCell.textContent = count;
+		indexCell.textContent = count + 1;
         row.appendChild(indexCell);
+        //вторая с кол-вом карт на игрока или типом игры
+        var typeCell = document.createElement("td");
+		typeCell.textContent = (gRoundOrder[count][0] == "normal" ? gRoundOrder[count][1] : gRoundOrder[count][0][0]);
+        row.appendChild(typeCell);
+   		count++;
         //дальше ячейки с результатами раунда
 		rowData.forEach(function(cellData) {
 			var cell = document.createElement("td");
@@ -470,7 +477,7 @@ function doTurnEnd(){
 			if (gRoundOrder[gCurrentRound][0] === "gold") { //на голде просто даём очки за каждую взятку
 				roundResult = gVists[i][0] * 10;
 			} 
-			if (gRoundOrder[gCurrentRound][0] === "miser") { //на мизере отнимаем очки за каждую взятку и даём бонус тем, кто не взял ничего
+			else if (gRoundOrder[gCurrentRound][0] === "miser") { //на мизере отнимаем очки за каждую взятку и даём бонус тем, кто не взял ничего
 				roundResult = gVists[i][0] * (-10);
 				if (gVists[i][0] == 0) roundResult = 50;
 			} 
